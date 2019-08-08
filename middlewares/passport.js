@@ -44,7 +44,7 @@ const jwtStrategy = new JwtStrategy({
  */
 const FACEBOOK_APP_ID = '2887329711339792';
 const FACEBOOK_APP_SECRET = 'eda78b7ca7c527c11bd7f8487fa949c0';
-const FACEBOOK_CB_URL = 'http://localhost:3000/facebook/callback';
+const FACEBOOK_CB_URL = 'http://localhost:3000/auth/facebook/callback';
 
 /**
  * Facebook strategy
@@ -53,25 +53,21 @@ const facebookStrategy = new FacebookStrategy({
   clientID: FACEBOOK_APP_ID,
   clientSecret: FACEBOOK_APP_SECRET,
   callbackURL: FACEBOOK_CB_URL,
-  profileFields: ['id', 'email', 'name']
-}, async (accesstoken, refreshToken, profile, cb) => {
-  console.log('profile')
-  console.log(profile)
+  profileFields: ['id', 'email', 'name'],
+  passReqToCallback: true
+}, async (req, accesstoken, refreshToken, profile, cb) => {
+  console.log(req.query.state)
+
   let account;
   try {
     account = await Account.findOne({ username: profile.emails[0].value }).exec();
-    console.log(account)
-    console.log('account fetched')
     if (account === undefined || account === null) {
-      console.log('new account is pending to create')
       const newAccount = new Account({
         username: profile.emails[0].value,
         activate: false,
         facebookId: profile.id
       })
-      console.log('account is created')
       account = await newAccount.save();
-      console.log('account is saved')
     }
 
   } catch (e) {
@@ -79,7 +75,14 @@ const facebookStrategy = new FacebookStrategy({
     return cb(null, false);
   }
   console.log('before return')
-  return cb(null, account);
+  const token = account.generateToken();
+
+  const callbackData = {
+    token,
+    redirectUrl: req.query.state
+  }
+  console.log(callbackData);
+  return cb(null, callbackData);
 })
 
 passport.use('local', localStrategy);

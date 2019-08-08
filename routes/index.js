@@ -44,19 +44,21 @@ router.post('/register', async (req, res) => {
   })
 })
 
-router.get('/facebook', passport.authenticate('facebook', { scope:['email'],session: false }), (req, res) => {
-  console.log(req);
-  console.log('wait')
-  return res.json({ a: 'ok' });
-})
+router.get('/facebook', (req, res, next) => {
+  console.log(req.query)
+  req._redirectUrl = req.query.redirectUrl;
+  console.log(req.query.redirectUrl)
+  console.log(req._redirectUrl);
+  console.log('showing request in /facebook')
+  console.log(req)
+  passport.authenticate(
+    'facebook',
+    { scope: ['email'], session: false }
+  )(req, res, next);
+});
 
 router.post('/login', passport.authenticate('local', { session: false }), (req, res) => {
-  console.log(req);
   const { user, login } = req;
-  console.log('hellworld')
-  console.log(user)
-  console.log(login)
-
   const payload = {
     username: user.username,
     exp: Date.now() + 100000
@@ -101,18 +103,24 @@ router.post('/login-jwt', passport.authenticate('local', { session: false }), (r
 })
 
 router.get('/get-sth-jwt', passport.authenticate('jwt', { session: false }), (req, res) => {
-  // const { user } = req;
-  // console.log(user);
   const { user, payload } = req;
-  console.log(user);
-  console.log(payload)
   console.log('heool')
   res.json({ ok: 'get-sth-jwt' });
 })
 
 router.get('/facebook/callback',
   passport.authenticate('facebook',
-    { successRedirect: '/', failureRedirect: '/register' }
-  ));
+    { failureRedirect: '/register' }
+  ), (req, res) => {
+    console.log('facebook/callback')
+    // console.log(req);
+    return res.json({ ok: '200' })
+    // res.redirect()
+  });
 
+router.get('/data', passport.authenticate('jwt', { session: false }), (req, res) => {
+  // const { user, payload } = req;
+  // console.log('heool')
+  res.json({ ok: '200' });
+})
 module.exports = router;
